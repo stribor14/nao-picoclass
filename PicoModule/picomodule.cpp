@@ -31,6 +31,7 @@ PicoModule::PicoModule(boost::shared_ptr<AL::ALBroker> broker, const std::string
 }
 
 PicoModule::~PicoModule(){
+
 }
 
 void PicoModule::init(){
