@@ -1,10 +1,16 @@
 #include "picomodule.hpp"
 
 #include <opencv2/imgproc/imgproc.hpp>
-#include "PICO/picornt.h"
 #include "APIwrappers.h"
+extern "C"{
+#include "PICO/picornt.h"
+}
 
-PicoModule::PicoModule(boost::shared_ptr<AL::ALBroker> broker, const std::string &name) : AL::ALModule(broker, name), memoryProxy(getParentBroker()){
+PicoModule::PicoModule(boost::shared_ptr<AL::ALBroker> broker, const std::string &name) :
+    AL::ALModule(broker, name),
+    m_memoryProxy(getParentBroker()),
+    m_cameraProxy(getParentBroker())
+{
     setModuleDescription("Image classification module based on Pico algorithm");
 
     functionName("startService", getName(), "Starts realtime classification from NAO camera.");
@@ -35,41 +41,40 @@ PicoModule::~PicoModule(){
 }
 
 void PicoModule::init(){
-    cameraProxy = AL::ALVideoDeviceProxy("nao.local");
-    memoryProxy.declareEvent("picoDetections", "PicoModule");
+    m_memoryProxy.declareEvent("picoDetections", "PicoModule");
 }
 
 void PicoModule::subscribeToVideo()
 {
-    if(!subscriberID.empty()){
+    if(!m_subscriberID.empty()){
         std::cout << "[ERROR][PICO] Module already subscribed to video device!" << std::endl;
         return;
     }
-    subscriberID = cameraProxy.subscribe("PicoModule", AL::k4VGA, AL::kRGBColorSpace, 5);
+    m_subscriberID = m_cameraProxy.subscribe("PicoModule", AL::k4VGA, AL::kRGBColorSpace, 5);
 }
 void PicoModule::unsuscribeFromVideo(){
-    if(subscriberID.empty()){
+    if(m_subscriberID.empty()){
         std::cout << "[ERROR][PICO] Module is currently not subscribed to video device!" << std::endl;
         return;
     }
-    cameraProxy.unsubscribe(subscriberID);
-    subscriberID.erase();
+    m_cameraProxy.unsubscribe(m_subscriberID);
+    m_subscriberID.erase();
 }
 void PicoModule::captureImage(){
 #ifdef MODULE_IS_REMOTE
-    AL::ALValue pic = cameraProxy.getImageRemote(subscriberID);
+    AL::ALValue pic = m_cameraProxy.getImageRemote(m_subscriberID);
 #else
-    AL::ALValue pic = cameraProxy.getImageLocal(subscriberID);
+    AL::ALValue pic = m_cameraProxy.getImageLocal(m_subscriberID);
 #endif
-    img = cv::Mat(cv::Size(pic[0], pic[1]), CV_8UC3);
-    img.data = (uchar*) pic[6].GetBinary();
-    cameraProxy.releaseImage(subscriberID);
+    m_img = cv::Mat(cv::Size(pic[0], pic[1]), CV_8UC3);
+    m_img.data = (uchar*) pic[6].GetBinary();
+    m_cameraProxy.releaseImage(m_subscriberID);
 }
 
 void *PicoModule::serviceFunction(void *ptr)
 {
     PicoModule* _this = (PicoModule *)ptr;
-    while(_this->serviceLoop){
+    while(_this->m_serviceLoop){
         uint8_t* pixels;
         int nrows, ncols, ldim;
         cv::Mat imgGray;
@@ -78,8 +83,8 @@ void *PicoModule::serviceFunction(void *ptr)
         int ndetections;
         float rcsq[4*MAXNDETECTIONS];
 
-        if(_this->img.channels() != 1) cv::cvtColor(_this->img, imgGray, CV_RGB2GRAY);
-        else imgGray = _this->img;
+        if(_this->m_img.channels() != 1) cv::cvtColor(_this->m_img, imgGray, CV_RGB2GRAY);
+        else imgGray = _this->m_img;
 
         _this->captureImage();
 
@@ -88,7 +93,7 @@ void *PicoModule::serviceFunction(void *ptr)
         ncols = imgGray.cols;
         ldim = imgGray.step;
 
-        ndetections = find_objects(rcsq, MAXNDETECTIONS, _this->cascade, _this->angle, pixels, nrows, ncols, ldim, _this->scalefactor, _this->stridefactor, _this->minsize, MIN(nrows, ncols));
+        ndetections = find_objects(rcsq, MAXNDETECTIONS, _this->m_cascade, _this->m_angle, pixels, nrows, ncols, ldim, _this->m_scalefactor, _this->m_stridefactor, _this->m_minsize, MIN(nrows, ncols));
 
         for(int k = 0; k<ndetections; k++){
             std::vector<float> tmp;
@@ -96,16 +101,16 @@ void *PicoModule::serviceFunction(void *ptr)
             tmp.push_back(rcsq[4*k + 1]);
             tmp.push_back(rcsq[4*k + 2]);
             tmp.push_back(rcsq[4*k + 3]);
-            _this->memoryProxy.raiseEvent("picoDetections", tmp);
+            _this->m_memoryProxy.raiseEvent("picoDetections", tmp);
         }
     }
 }
 
 void PicoModule::startService(std::string cascade, float angle = 0, float scalefactor = 1.1, float stridefactor = 0.1, int minsize = 128){
-    this->angle = angle == -1 ? 0 : angle*2*3.1415926;
-    this->angle = scalefactor == -1 ? 1.1 : scalefactor;
-    this->angle = stridefactor == -1 ? 0.1: stridefactor;
-    this->angle = minsize == -1 ? 128: minsize;
+    m_angle = angle == -1 ? 0 : angle*2*3.1415926;
+    m_angle = scalefactor == -1 ? 1.1 : scalefactor;
+    m_angle = stridefactor == -1 ? 0.1: stridefactor;
+    m_angle = minsize == -1 ? 128: minsize;
 
     FILE* file = fopen(cascade.c_str(), "rb");
     if(!file){
@@ -115,40 +120,40 @@ void PicoModule::startService(std::string cascade, float angle = 0, float scalef
     fseek(file, 0L, SEEK_END);
     int size = ftell(file);
     fseek(file, 0L, SEEK_SET);
-    this->cascade = malloc(size);
-    if(!this->cascade || size!=fread(this->cascade, 1, size, file)){
+    m_cascade = malloc(size);
+    if(!m_cascade || size!=fread(m_cascade, 1, size, file)){
         std::cout << "[ERROR][PICO] Failure while reading cascade from: " << cascade << std::endl;
-        free(this->cascade);
+        free(m_cascade);
         return;
     }
     fclose(file);
 
 
     subscribeToVideo();
-    serviceLoop = true;
-    int tmp = pthread_create(&serviceThread, NULL, serviceFunction, this);
+    m_serviceLoop = true;
+    int tmp = pthread_create(&m_serviceThread, NULL, serviceFunction, this);
     if (tmp) {
         std::cout << "[ERROR][PICO] Service thread failed to initialize" << std::endl;
-        serviceLoop = false;
+        m_serviceLoop = false;
         unsuscribeFromVideo();
     }
 }
 void PicoModule::stopService(){
-    if(serviceLoop){
-        serviceLoop = false;
-        pthread_join(serviceThread, NULL);
+    if(m_serviceLoop){
+        m_serviceLoop = false;
+        pthread_join(m_serviceThread, NULL);
         unsuscribeFromVideo();
-        free(this->cascade);
+        free(m_cascade);
     } else {
         std::cout << "[ERROR][PICO] Service not started" << std::endl;
     }
 }
 
 void PicoModule::detectOnImage(AL::ALValue image, std::string cascade, float angle = 0, float scalefactor = 1.1, float stridefactor = 0.1, int minsize = 128){
-    this->angle = angle == -1 ? 0 : angle*2*3.1415926;
-    this->angle = scalefactor == -1 ? 1.1 : scalefactor;
-    this->angle = stridefactor == -1 ? 0.1: stridefactor;
-    this->angle = minsize == -1 ? 128: minsize;
+    m_angle = angle == -1 ? 0 : angle*2*3.1415926;
+    m_angle = scalefactor == -1 ? 1.1 : scalefactor;
+    m_angle = stridefactor == -1 ? 0.1: stridefactor;
+    m_angle = minsize == -1 ? 128: minsize;
     FILE* file = fopen(cascade.c_str(), "rb");
     if(!file){
         std::cout << "[ERROR][PICO] Cannot read cascade from: " << cascade << std::endl;
@@ -157,15 +162,15 @@ void PicoModule::detectOnImage(AL::ALValue image, std::string cascade, float ang
     fseek(file, 0L, SEEK_END);
     int size = ftell(file);
     fseek(file, 0L, SEEK_SET);
-    this->cascade = malloc(size);
-    if(!this->cascade || size!=fread(this->cascade, 1, size, file)){
+    m_cascade = malloc(size);
+    if(!m_cascade || size!=fread(m_cascade, 1, size, file)){
         std::cout << "[ERROR][PICO] Failure while reading cascade from: " << cascade << std::endl;
-        free(this->cascade);
+        free(m_cascade);
         return;
     }
     fclose(file);
 
-    this->img = ALtoMAT(image);
+    m_img = ALtoMAT(image);
 
     uint8_t* pixels;
     int nrows, ncols, ldim;
@@ -175,17 +180,17 @@ void PicoModule::detectOnImage(AL::ALValue image, std::string cascade, float ang
     int ndetections;
     float rcsq[4*MAXNDETECTIONS];
 
-    if(this->img.channels() != 1) cv::cvtColor(this->img, imgGray, CV_RGB2GRAY);
-    else imgGray = this->img;
+    if(m_img.channels() != 1) cv::cvtColor(m_img, imgGray, CV_RGB2GRAY);
+    else imgGray = m_img;
 
-    this->captureImage();
+    captureImage();
 
     pixels = (uint8_t*)imgGray.data;
     nrows = imgGray.rows;
     ncols = imgGray.cols;
     ldim = imgGray.step;
 
-    ndetections = find_objects(rcsq, MAXNDETECTIONS, this->cascade, this->angle, pixels, nrows, ncols, ldim, this->scalefactor, this->stridefactor, this->minsize, MIN(nrows, ncols));
+    ndetections = find_objects(rcsq, MAXNDETECTIONS, m_cascade, m_angle, pixels, nrows, ncols, ldim, m_scalefactor, m_stridefactor, m_minsize, MIN(nrows, ncols));
 
     for(int k = 0; k<ndetections; k++){
         std::vector<float> tmp;
@@ -193,7 +198,7 @@ void PicoModule::detectOnImage(AL::ALValue image, std::string cascade, float ang
         tmp.push_back(rcsq[4*k + 1]);
         tmp.push_back(rcsq[4*k + 2]);
         tmp.push_back(rcsq[4*k + 3]);
-        this->memoryProxy.raiseEvent("picoDetections", tmp);
+        m_memoryProxy.raiseEvent("picoDetections", tmp);
     }
 
 }

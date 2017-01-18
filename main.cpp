@@ -4,6 +4,7 @@
 
 #include <alcommon/albroker.h>
 #include <alcommon/albrokermanager.h>
+#include <alcommon/altoolsmain.h>
 
 #define ALCALL
 

@@ -14,19 +14,19 @@
 class PicoModule : public AL::ALModule
 {
 private:
-    AL::ALVideoDeviceProxy cameraProxy;
-    AL::ALMemoryProxy memoryProxy;
-    cv::Mat img;
-    pthread_t serviceThread;
-    volatile bool serviceLoop;
+    AL::ALVideoDeviceProxy m_cameraProxy;
+    AL::ALMemoryProxy m_memoryProxy;
+    cv::Mat m_img;
+    pthread_t m_serviceThread;
+    volatile bool m_serviceLoop;
 
-    std::string subscriberID;
+    std::string m_subscriberID;
 
-    int minsize;
-    float angle;
-    float scalefactor;
-    float stridefactor;
-    void* cascade;
+    int m_minsize;
+    float m_angle;
+    float m_scalefactor;
+    float m_stridefactor;
+    void* m_cascade;
 
     void subscribeToVideo();
     void unsuscribeFromVideo();

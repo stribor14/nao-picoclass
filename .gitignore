@@ -1,2 +1,3 @@
-PicoModule/build-comp/
+build-pc/
+build-atom/
 *.user
