@@ -16,10 +16,6 @@ class PicoModule : public AL::ALVisionExtractor
 {
 private:
     AL::ALMemoryProxy m_memoryProxy;
-    pthread_t m_serviceThread;
-    volatile bool m_serviceLoop;
-
-    std::string m_subscriberID;
 
     int m_minsize;
     float m_angle;
@@ -41,8 +37,6 @@ public:
     virtual void process(AL::ALImage *img);
 
     void setParameters(std::string, float, float, float, int, int treshold);
-    void stopService();
-
     void detectOnImage(AL::ALValue);
 };
 

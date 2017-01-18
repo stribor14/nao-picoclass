@@ -45,7 +45,6 @@ PicoModule::~PicoModule(){
 
 void PicoModule::init(){
     m_memoryProxy.declareEvent("picoDetections", "PicoModule");
-    m_serviceLoop = false;
 
     m_angle = 0;
     m_scalefactor = 1.1;
