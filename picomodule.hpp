@@ -8,15 +8,14 @@
 #include <alproxies/alvideodeviceproxy.h>
 #include <alproxies/almemoryproxy.h>
 #include <alvision/alvisiondefinitions.h>
+#include <alvision/alvisionextractor.h>
 
 #include <opencv2/core/core.hpp>
 
-class PicoModule : public AL::ALModule
+class PicoModule : public AL::ALVisionExtractor
 {
 private:
-    AL::ALVideoDeviceProxy m_cameraProxy;
     AL::ALMemoryProxy m_memoryProxy;
-    cv::Mat m_img;
     pthread_t m_serviceThread;
     volatile bool m_serviceLoop;
 
@@ -41,6 +40,9 @@ public:
     virtual ~PicoModule();
 
     virtual void init();
+    virtual void start();
+    virtual void stop();
+    virtual void process(AL::ALImage *img);
 
     void startService(std::string, float, float, float, int);
     void stopService();
