@@ -25,14 +25,10 @@ private:
     float m_angle;
     float m_scalefactor;
     float m_stridefactor;
+    float m_treshold;
     void* m_cascade;
 
-    void subscribeToVideo();
-    void unsuscribeFromVideo();
-
-protected:
-    void captureImage();
-    static void *serviceFunction(void *ptr);
+    void readCascade(std::string cascade);
 
 public:
     PicoModule(boost::shared_ptr<AL::ALBroker>, const std::string&);
@@ -44,10 +40,10 @@ public:
     virtual void stop();
     virtual void process(AL::ALImage *img);
 
-    void startService(std::string, float, float, float, int);
+    void setParameters(std::string, float, float, float, int, int treshold);
     void stopService();
 
-    void detectOnImage(AL::ALValue, std::string, float, float, float, int);
+    void detectOnImage(AL::ALValue);
 };
 
 #endif //PICOMODULE_H
