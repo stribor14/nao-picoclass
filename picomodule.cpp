@@ -12,7 +12,6 @@ extern "C"{
 #include <opencv2/core/core.hpp>
 #endif
 
-
 PicoModule::PicoModule(boost::shared_ptr<AL::ALBroker> broker, const std::string &name) :
     AL::ALVisionExtractor(broker, name, AL::k4VGA, AL::kRGBColorSpace, 5),
     m_memoryProxy(getParentBroker())
@@ -39,7 +38,7 @@ PicoModule::PicoModule(boost::shared_ptr<AL::ALBroker> broker, const std::string
 }
 
 PicoModule::~PicoModule(){
-    for(std::list<classifier>::iterator it = m_classifiers.begin(); it != m_classifiers.end();)
+    for(std::list<classifier>::iterator it = m_classifiers.begin(); it != m_classifiers.end(); ++it)
         free(it->cascade);
 }
 
@@ -91,7 +90,7 @@ void PicoModule::process(AL::ALImage *img)
     int ncols = imgGray.cols;
     int ldim = imgGray.step;
 
-    for(std::list<classifier>::iterator it = m_classifiers.begin(); it != m_classifiers.end();){
+    for(std::list<classifier>::iterator it = m_classifiers.begin(); it != m_classifiers.end(); ++it){
         float rcsq[4*maxDetections];
         int ndetections = find_objects(rcsq, maxDetections, it->cascade, it->angle, pixels, nrows, ncols, ldim, it->scalefactor, it->stridefactor, it->minsize, MIN(nrows, ncols));
 
@@ -141,7 +140,6 @@ void PicoModule::addClassifier(std::string name, std::string cascade, float angl
         free(temp.cascade);
     } else m_classifiers.push_back(temp);
     fclose(file);
-
 }
 
 void PicoModule::removeClassifier(std::string name){

@@ -39,15 +39,15 @@ public:
 
     virtual ~PicoModule();
 
-    virtual void subscribe(const std::string &pSubscribedName, const int &pPeriod, const float &pPrecision);
-    void subscribe(const std::string &pSubscribedName);
+    virtual void subscribe(const std::string&, const int&, const float&);
+    void subscribe(const std::string&);
 
     virtual void init();
     virtual void start();
     virtual void stop();
-    virtual void process(AL::ALImage *img);
+    virtual void process(AL::ALImage*);
 
-    void addClassifier(std::string, std::string, float, float, float, int, int treshold);
+    void addClassifier(std::string, std::string, float, float, float, int, int);
     void removeClassifier(std::string);
 
     void detectOnImage(AL::ALImage);
