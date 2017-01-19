@@ -34,8 +34,6 @@ private:
     float def_treshold;
     std::list<classifier> m_classifiers;
 
-    void* readCascade(const std::string &cascade);
-
 public:
     PicoModule(boost::shared_ptr<AL::ALBroker>, const std::string&);
 
@@ -52,7 +50,7 @@ public:
     void addClassifier(std::string, std::string, float, float, float, int, int treshold);
     void removeClassifier(std::string);
 
-    void detectOnImage(AL::ALValue);
+    void detectOnImage(AL::ALImage);
 };
 
 #endif //PICOMODULE_H
