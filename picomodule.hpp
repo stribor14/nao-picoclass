@@ -12,31 +12,46 @@
 
 #include <opencv2/core/core.hpp>
 
+struct classifier{
+    std::string name;
+    int minsize;
+    float angle;
+    float scalefactor;
+    float stridefactor;
+    float treshold;
+    void* cascade;
+};
+
 class PicoModule : public AL::ALVisionExtractor
 {
 private:
     AL::ALMemoryProxy m_memoryProxy;
 
-    int m_minsize;
-    float m_angle;
-    float m_scalefactor;
-    float m_stridefactor;
-    float m_treshold;
-    void* m_cascade;
+    int def_minsize;
+    float def_angle;
+    float def_scalefactor;
+    float def_stridefactor;
+    float def_treshold;
+    std::list<classifier> m_classifiers;
 
-    void readCascade(std::string cascade);
+    void* readCascade(const std::string &cascade);
 
 public:
     PicoModule(boost::shared_ptr<AL::ALBroker>, const std::string&);
 
     virtual ~PicoModule();
 
+    virtual void subscribe(const std::string &pSubscribedName, const int &pPeriod, const float &pPrecision);
+    void subscribe(const std::string &pSubscribedName);
+
     virtual void init();
     virtual void start();
     virtual void stop();
     virtual void process(AL::ALImage *img);
 
-    void setParameters(std::string, float, float, float, int, int treshold);
+    void addClassifier(std::string, std::string, float, float, float, int, int treshold);
+    void removeClassifier(std::string);
+
     void detectOnImage(AL::ALValue);
 };
 
