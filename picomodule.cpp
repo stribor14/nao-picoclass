@@ -42,18 +42,6 @@ PicoModule::~PicoModule(){
         free(it->cascade);
 }
 
-void PicoModule::subscribe(const std::string &pSubscribedName, const int &pPeriod, const float &pPrecision)
-{
-    if(m_classifiers.size()) AL::ALVisionExtractor::subscribe(pSubscribedName, pPeriod, pPrecision);
-    else std::cout << "[ERROR][PICO] Subscription refused: no classifiers set." << std::endl;
-}
-
-void PicoModule::subscribe(const std::string &pSubscribedName)
-{
-    if(m_classifiers.size()) AL::ALVisionExtractor::subscribe(pSubscribedName);
-    else std::cout << "[ERROR][PICO] Subscription refused: no classifiers set." << std::endl;
-}
-
 void PicoModule::init(){
     m_memoryProxy.declareEvent("picoDetections", "PicoModule");
 

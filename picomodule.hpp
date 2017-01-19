@@ -39,9 +39,6 @@ public:
 
     virtual ~PicoModule();
 
-    virtual void subscribe(const std::string&, const int&, const float&);
-    void subscribe(const std::string&);
-
     virtual void init();
     virtual void start();
     virtual void stop();
