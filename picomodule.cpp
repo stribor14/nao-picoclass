@@ -13,7 +13,7 @@ extern "C"{
 #endif
 
 PicoModule::PicoModule(boost::shared_ptr<AL::ALBroker> broker, const std::string &name) :
-    AL::ALVisionExtractor(broker, name, AL::k4VGA, AL::kRGBColorSpace, 5),
+    AL::ALVisionExtractor(broker, name, AL::kVGA, AL::kRGBColorSpace, 5),
     m_memoryProxy(getParentBroker())
 {
     setModuleDescription("Image classification module based on Pico algorithm");
@@ -31,6 +31,10 @@ PicoModule::PicoModule(boost::shared_ptr<AL::ALBroker> broker, const std::string
     functionName("removeClassifier", getName(), "Remove classifier by name");
     BIND_METHOD(PicoModule::removeClassifier);
     addParam("name", "Name of classifier [string]");
+
+    functionName("getClassifierList", getName(), "Remove classifier by name");
+    BIND_METHOD(PicoModule::getClassifierList);
+    setReturn("nameList", "Array of classifier names [ALValue]");
 
     functionName("detectOnImage", getName(), "Run detection on one image (pass negative value to set default one)");
     BIND_METHOD(PicoModule::detectOnImage);
@@ -78,28 +82,37 @@ void PicoModule::process(AL::ALImage *img)
     int ncols = imgGray.cols;
     int ldim = imgGray.step;
 
+    bool raise = false;
+    AL::ALValue out;
+    //push timestamp (secs, msecs)
+    out.arrayPush((*img).toALValue()[4]);
+    out.arrayPush((*img).toALValue()[5]);
+    //push image size
+    out.arrayPush((*img).toALValue()[0]);
+    out.arrayPush((*img).toALValue()[1]);
+
     for(std::list<classifier>::iterator it = m_classifiers.begin(); it != m_classifiers.end(); ++it){
         float rcsq[4*maxDetections];
         int ndetections = find_objects(rcsq, maxDetections, it->cascade, it->angle, pixels, nrows, ncols, ldim, it->scalefactor, it->stridefactor, it->minsize, MIN(nrows, ncols));
 
         if(ndetections){
-            AL::ALValue out;
             for(int k = 0; k<ndetections; k++){
                 if(rcsq[4*k + 3] < it->treshold) continue;
+                raise = true;
                 AL::ALValue tmp;
                 tmp.arrayPush(it->name);
-                tmp.arrayPush(rcsq[4*k + 0]);
-                tmp.arrayPush(rcsq[4*k + 1]);
-                tmp.arrayPush(rcsq[4*k + 2]);
-                tmp.arrayPush(rcsq[4*k + 3]);
+                tmp.arrayPush(rcsq[4*k + 1]); // witdth
+                tmp.arrayPush(rcsq[4*k + 0]); // heigth
+                tmp.arrayPush(rcsq[4*k + 2]); // size
+                tmp.arrayPush(rcsq[4*k + 3]); // certainty
                 out.arrayPush(tmp);
                 #ifdef MODULE_IS_REMOTE
                     cv::circle(imgOrig, cv::Point(static_cast<int>(rcsq[4*k + 1]),static_cast<int>(rcsq[4*k + 0])), static_cast<int>(rcsq[4*k + 2]/2), cv::Scalar( 0, 0, 255 ), 5);
                 #endif
             }
-            m_memoryProxy.raiseEvent("picoDetections", out);
         }
     }
+    if(raise) m_memoryProxy.raiseEvent("picoDetections", out);
     #ifdef MODULE_IS_REMOTE
             cv::imwrite("slika.png",imgOrig);
     #endif
@@ -136,6 +149,13 @@ void PicoModule::removeClassifier(std::string name){
             free(it->cascade);
             m_classifiers.erase(it++);
         } else ++it;
+}
+
+AL::ALValue PicoModule::getClassifierList()
+{
+    AL::ALValue out;
+    for(std::list<classifier>::iterator it = m_classifiers.begin(); it != m_classifiers.end();)
+        out.arrayPush(it->name);
 }
 
 void PicoModule::detectOnImage(AL::ALImage image){

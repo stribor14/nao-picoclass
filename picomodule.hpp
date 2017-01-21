@@ -46,6 +46,7 @@ public:
 
     void addClassifier(std::string, std::string, float, float, float, int, int);
     void removeClassifier(std::string);
+    AL::ALValue getClassifierList();
 
     void detectOnImage(AL::ALImage);
 };
