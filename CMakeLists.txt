@@ -10,7 +10,7 @@ set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR} )
 
 option(MODULE_IS_REMOTE
   "ON - OFF"
-  OFF)
+  ON)
 
 aux_source_directory(./PICO SRC_PICO)
 aux_source_directory(. SRC_LIST)

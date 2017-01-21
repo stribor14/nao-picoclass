@@ -87,7 +87,7 @@ void PicoModule::process(AL::ALImage *img)
     //push timestamp (secs, msecs)
     out.arrayPush((*img).toALValue()[4]);
     out.arrayPush((*img).toALValue()[5]);
-    //push image size
+    //push image size (height, width)
     out.arrayPush((*img).toALValue()[0]);
     out.arrayPush((*img).toALValue()[1]);
 
@@ -100,22 +100,16 @@ void PicoModule::process(AL::ALImage *img)
                 if(rcsq[4*k + 3] < it->treshold) continue;
                 raise = true;
                 AL::ALValue tmp;
-                tmp.arrayPush(it->name);
-                tmp.arrayPush(rcsq[4*k + 1]); // witdth
-                tmp.arrayPush(rcsq[4*k + 0]); // heigth
+                tmp.arrayPush(it->name); // name
+                tmp.arrayPush(rcsq[4*k + 1]); // center_x
+                tmp.arrayPush(rcsq[4*k + 0]); // center_y
                 tmp.arrayPush(rcsq[4*k + 2]); // size
                 tmp.arrayPush(rcsq[4*k + 3]); // certainty
                 out.arrayPush(tmp);
-                #ifdef MODULE_IS_REMOTE
-                    cv::circle(imgOrig, cv::Point(static_cast<int>(rcsq[4*k + 1]),static_cast<int>(rcsq[4*k + 0])), static_cast<int>(rcsq[4*k + 2]/2), cv::Scalar( 0, 0, 255 ), 5);
-                #endif
             }
         }
     }
     if(raise) m_memoryProxy.raiseEvent("picoDetections", out);
-    #ifdef MODULE_IS_REMOTE
-            cv::imwrite("slika.png",imgOrig);
-    #endif
 }
 
 void PicoModule::addClassifier(std::string name, std::string cascade, float angle, float scalefactor, float stridefactor, int minsize, int treshold){
@@ -154,8 +148,9 @@ void PicoModule::removeClassifier(std::string name){
 AL::ALValue PicoModule::getClassifierList()
 {
     AL::ALValue out;
-    for(std::list<classifier>::iterator it = m_classifiers.begin(); it != m_classifiers.end();)
+    for(std::list<classifier>::iterator it = m_classifiers.begin(); it != m_classifiers.end();++it)
         out.arrayPush(it->name);
+    return out;
 }
 
 void PicoModule::detectOnImage(AL::ALImage image){
