@@ -13,7 +13,7 @@ extern "C"{
 #endif
 
 PicoModule::PicoModule(boost::shared_ptr<AL::ALBroker> broker, const std::string &name) :
-    AL::ALVisionExtractor(broker, name, AL::kVGA, AL::kRGBColorSpace, 5),
+    AL::ALVisionExtractor(broker, name, AL::kVGA, AL::kYuvColorSpace, 5),
     m_memoryProxy(getParentBroker())
 {
     setModuleDescription("Image classification module based on Pico algorithm");
