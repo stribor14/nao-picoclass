@@ -26,14 +26,7 @@ class PicoModule : public AL::ALVisionExtractor
 {
 private:
     AL::ALMemoryProxy m_memoryProxy;
-
-    int def_minsize;
-    float def_angle;
-    float def_scalefactor;
-    float def_stridefactor;
-    float def_treshold;
     std::list<classifier> m_classifiers;
-
 public:
     PicoModule(boost::shared_ptr<AL::ALBroker>, const std::string&);
 
@@ -44,7 +37,7 @@ public:
     virtual void stop();
     virtual void process(AL::ALImage*);
 
-    void addClassifier(std::string, std::string, float, float, float, int, int);
+    void addClassifier(std::string, AL::ALValue, float, float, float, int, int);
     void removeClassifier(std::string);
     AL::ALValue getClassifierList();
 

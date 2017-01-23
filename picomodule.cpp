@@ -12,6 +12,13 @@ extern "C"{
 #include <opencv2/core/core.hpp>
 #endif
 
+// declare default classifier parameters
+#define def_angle 0
+#define def_scalefactor 1.1
+#define def_stridefactor 0.1
+#define def_minsize 128
+#define def_treshold  5.0
+
 PicoModule::PicoModule(boost::shared_ptr<AL::ALBroker> broker, const std::string &name) :
     AL::ALVisionExtractor(broker, name, AL::kVGA, AL::kYuvColorSpace, 5),
     m_memoryProxy(getParentBroker())
@@ -21,7 +28,7 @@ PicoModule::PicoModule(boost::shared_ptr<AL::ALBroker> broker, const std::string
     functionName("addClassifier", getName(), "Add classifier and parameters for classification (pass negative value to set default one)");
     BIND_METHOD(PicoModule::addClassifier);
     addParam("name", "Name of classifier [string]");
-    addParam("cascade", "Path to cascade file [string]");
+    addParam("cascade", "Binary data or path to cascade file [ALValue(binary)] [ALValue(string)]");
     addParam("angle", "Cascade rotation [float = 0][rad]");
     addParam("scalefactor", "Scale factor during multiscale detection [float = 1.1][\%]");
     addParam("stridefactor", "Strade factor for window movement between neighboring detections [float = 0.1][\%]");
@@ -48,13 +55,6 @@ PicoModule::~PicoModule(){
 
 void PicoModule::init(){
     m_memoryProxy.declareEvent("picoDetections", "PicoModule");
-
-    // declare default classifier parameters
-    def_angle = 0;
-    def_scalefactor = 1.1;
-    def_stridefactor = 0.1;
-    def_minsize = 128;
-    def_treshold = 5.0;
 }
 
 void PicoModule::start()
@@ -112,7 +112,7 @@ void PicoModule::process(AL::ALImage *img)
     if(raise) m_memoryProxy.raiseEvent("picoDetections", out);
 }
 
-void PicoModule::addClassifier(std::string name, std::string cascade, float angle, float scalefactor, float stridefactor, int minsize, int treshold){
+void PicoModule::addClassifier(std::string name, AL::ALValue cascade, float angle, float scalefactor, float stridefactor, int minsize, int treshold){
     classifier temp;
     temp.name = name;
     temp.angle = angle < 0 ? def_angle : angle*2*3.1415926;
@@ -121,20 +121,28 @@ void PicoModule::addClassifier(std::string name, std::string cascade, float angl
     temp.minsize = minsize < 0 ? def_minsize : minsize;
     temp.treshold = treshold < 0 ? def_treshold : treshold;
 
-    FILE* file = fopen(cascade.c_str(), "rb");
-    if(!file){
-        std::cout << "[ERROR][PICO] Cannot read cascade from: " << cascade << std::endl;
-        return;
+    if(cascade.isString()){
+        FILE* file = fopen(cascade.toString().c_str(), "rb");
+        if(!file){
+            std::cout << "[ERROR][PICO] Cannot read cascade from: " << cascade.toString() << std::endl;
+            return;
+        }
+        fseek(file, 0L, SEEK_END);
+        int size = ftell(file);
+        fseek(file, 0L, SEEK_SET);
+        temp.cascade = malloc(size);
+        if(!temp.cascade || size!=fread(temp.cascade, 1, size, file)){
+            std::cout << "[ERROR][PICO] Failure while reading cascade from: " << cascade.toString() << std::endl;
+            free(temp.cascade);
+        } else m_classifiers.push_back(temp);
+        fclose(file);
+    } else if(cascade.isBinary()){
+        int size = cascade.getSize();
+        temp.cascade = malloc(size);
+        memcpy(temp.cascade, cascade.GetBinary(), size);
+    } else {
+        std::cout << "[ERROR][PICO] Cascade is nor data[Binary] nor path[String]"<< std::endl;
     }
-    fseek(file, 0L, SEEK_END);
-    int size = ftell(file);
-    fseek(file, 0L, SEEK_SET);
-    temp.cascade = malloc(size);
-    if(!temp.cascade || size!=fread(temp.cascade, 1, size, file)){
-        std::cout << "[ERROR][PICO] Failure while reading cascade from: " << cascade << std::endl;
-        free(temp.cascade);
-    } else m_classifiers.push_back(temp);
-    fclose(file);
 }
 
 void PicoModule::removeClassifier(std::string name){
