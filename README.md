@@ -28,7 +28,7 @@ Naoqi(2.1) module for visual classification based on PICO classifying algorithm 
       eventValue[3]  - height
     Detected objects:
       eventValue[4+][0] - classifier name
-      eventValue[4+][0] - X coordinate
-      eventValue[4+][0] - Y coordinate
-      eventValue[4+][0] - Diameter
-      eventValue[4+][0] - Certainty
+      eventValue[4+][1] - X coordinate
+      eventValue[4+][2] - Y coordinate
+      eventValue[4+][3] - Diameter
+      eventValue[4+][4] - Certainty
