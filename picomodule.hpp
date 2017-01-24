@@ -27,6 +27,8 @@ class PicoModule : public AL::ALVisionExtractor
 private:
     AL::ALMemoryProxy m_memoryProxy;
     std::list<classifier> m_classifiers;
+
+    bool nameExist(std::string);
 public:
     PicoModule(boost::shared_ptr<AL::ALBroker>, const std::string&);
 
@@ -40,7 +42,7 @@ public:
     void addClassifier(std::string, AL::ALValue, float, float, float, int, int);
     void removeClassifier(std::string);
     AL::ALValue getClassifierList();
-
+    AL::ALValue getClassifierParameters(std::string name);
     void detectOnImage(AL::ALImage);
 };
 
