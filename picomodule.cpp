@@ -40,7 +40,7 @@ PicoModule::PicoModule(boost::shared_ptr<AL::ALBroker> broker, const std::string
     addParam("scalefactor", "Scale factor during multiscale detection [float = 1.1][\%]");
     addParam("stridefactor", "Strade factor for window movement between neighboring detections [float = 0.1][\%]");
     addParam("minsize", "Minimum size for detected object [int = 128][pix]");
-    addParam("treshold", "Detection quality treshold [float = 5.0]");
+    addParam("treshold", "Detection certainty treshold [float = 5.0]");
 
     functionName("removeClassifier", getName(), "Remove classifier by name");
     BIND_METHOD(PicoModule::removeClassifier);
