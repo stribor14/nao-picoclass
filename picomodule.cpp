@@ -1,5 +1,7 @@
 #include "picomodule.hpp"
 
+#include <qi/log.hpp>
+
 #include <alvision/alimage_opencv.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "APIwrappers.h"
@@ -46,7 +48,7 @@ PicoModule::PicoModule(boost::shared_ptr<AL::ALBroker> broker, const std::string
     BIND_METHOD(PicoModule::removeClassifier);
     addParam("name", "Name of classifier [string]");
 
-    functionName("getClassifierList", getName(), "Get name list of loaded classifiers");
+    functionName("getClassifierList", getName(), "Get list of classifier names");
     BIND_METHOD(PicoModule::getClassifierList);
     setReturn("nameList", "Array of classifier names [ALValue]");
 
@@ -71,7 +73,9 @@ void PicoModule::init(){
 
 void PicoModule::start()
 {
-
+    if(!m_classifiers.size()){
+        qiLogWarning("PicoModule") << "Running classifation with empty classifier list." << std::endl;
+    }
 }
 
 void PicoModule::stop()
@@ -126,7 +130,7 @@ void PicoModule::process(AL::ALImage *img)
 
 void PicoModule::addClassifier(std::string name, AL::ALValue cascade, float angle, float scalefactor, float stridefactor, int minsize, int treshold){
     if(nameExist(name)){
-        std::cout << "[ERROR][PICO] Classifier with name \"" << name << "\" already exist." << std::endl;
+        qiLogError("PicoModule") << "Classifier with name \"" << name << "\" already exist." << std::endl;
         return;
     }
     classifier temp;
@@ -142,7 +146,7 @@ void PicoModule::addClassifier(std::string name, AL::ALValue cascade, float angl
         if(path.at(0) == '\"') path = path.substr(1, path.size()-2);
         FILE* file = fopen(path.c_str(), "rb");
         if(!file){
-            std::cout << "[ERROR][PICO] Cannot read cascade from: " << cascade.toString().c_str() << std::endl;
+            qiLogError("PicoModule") << "Cannot read cascade from: " << path << std::endl;
             return;
         }
         fseek(file, 0L, SEEK_END);
@@ -150,7 +154,7 @@ void PicoModule::addClassifier(std::string name, AL::ALValue cascade, float angl
         fseek(file, 0L, SEEK_SET);
         temp.cascade = malloc(size);
         if(!temp.cascade || size!=fread(temp.cascade, 1, size, file)){
-            std::cout << "[ERROR][PICO] Failure while reading cascade from: " << cascade.toString() << std::endl;
+            qiLogError("PicoModule") << "Failure while reading cascade from: " << path << std::endl;
             free(temp.cascade);
         } else m_classifiers.push_back(temp);
         fclose(file);
@@ -159,13 +163,15 @@ void PicoModule::addClassifier(std::string name, AL::ALValue cascade, float angl
         temp.cascade = malloc(size);
         memcpy(temp.cascade, cascade.GetBinary(), size);
     } else {
-        std::cout << "[ERROR][PICO] Cascade is nor data[Binary] nor path[String]"<< std::endl;
+        qiLogError("PicoModule") << "Cascade is nor data[Binary] nor path[String]" << std::endl;
     }
+
+    qiLogInfo("PicoModule") << "Classifier \"" << name << "\" added";
 }
 
 void PicoModule::removeClassifier(std::string name){
     if(!nameExist(name)){
-        std::cout << "[ERROR][PICO] Classifier with name \"" << name << "\" doesn\'t exist." << std::endl;
+        qiLogWarning("PicoModule") << "Classifier with name \"" << name << "\" doesn\'t exist" << std::endl;
         return;
     }
     for(std::list<classifier>::iterator it = m_classifiers.begin(); it != m_classifiers.end(); ++it)
@@ -174,6 +180,7 @@ void PicoModule::removeClassifier(std::string name){
             m_classifiers.erase(it);
             return;
         }
+    qiLogInfo("PicoModule") << "Classifier \"" << name << "\" removed" << std::endl;
 }
 
 AL::ALValue PicoModule::getClassifierList()
@@ -187,7 +194,7 @@ AL::ALValue PicoModule::getClassifierList()
 AL::ALValue PicoModule::getClassifierParameters(std::string name)
 {
     if(!nameExist(name)){
-        std::cout << "[ERROR][PICO] Classifier with name \"" << name << "\" doesn\'t exist." << std::endl;
+        qiLogWarning("PicoModule") << "Classifier with name \"" << name << "\" doesn\'t exist" << std::endl;
         return AL::ALValue(false);
     }
     for(std::list<classifier>::iterator it = m_classifiers.begin(); it != m_classifiers.end(); ++it)
