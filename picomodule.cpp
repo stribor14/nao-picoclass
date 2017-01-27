@@ -81,6 +81,7 @@ PicoModule::~PicoModule(){
 
 void PicoModule::init(){
     m_memoryProxy.declareEvent("picoDetections", "PicoModule");
+    this->setActiveCamera(AL::kTopCamera);
 }
 
 void PicoModule::start()
