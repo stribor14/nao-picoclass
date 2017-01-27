@@ -10,11 +10,9 @@ Naoqi(2.1) module for visual classification based on PICO classifying algorithm 
     void detectOnImage(image)  
     void subscribe(subscriberName) 
     void unsubscribe(subscriberName)
-    void setColorSpace(colorSpace)  
     void setFrameRate(frameRate)  
     void setResolution(resolution)  
-    void setActiveCamera(cameraID)  
-    int getColorSpace()  
+    void setActiveCamera(cameraID)   
     int getFrameRate() 
     int getResolution() 
     int getActiveCamera()
@@ -39,11 +37,11 @@ Naoqi(2.1) module for visual classification based on PICO classifying algorithm 
 
 ## Example:
     broker = AL::ALBroker("PicoModule", "nao.local")
-    classNames = broker.call("getClassifierList")
-    if(!ourClassLoaded(classNames))
-        broker.call("addClassifier", "face", "/home/nao/facefinder", -1, -1, -1, -1, -1)
+    classNames = broker.getClassifierList();
+    if(!classNames.find("face"))
+        broker.addClassifier("face", "/home/nao/facefinder", -1, -1, -1, -1, -1)
         # if negative parameter value, module uses default one
-    broker.call("setCamera", 0)
-    broker.call("subscribe", "myName") # process starts if there is classifier
-    if(broker.call("isProcessing")
+    broker.setCamera(0)
+    broker.subscribe("myName") # process starts if there is classifier
+    if(broker.isProcessing())
         # TODO: add ALMemoryProxy and listen do "PicoModule" event "picoDetections"
