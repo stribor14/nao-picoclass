@@ -6,6 +6,7 @@
 #
 
 import sys
+import numpy
 
 from PyQt4.QtGui import QWidget, QImage, QApplication, QPainter, QPen
 from PyQt4.QtCore import Qt, QPoint
@@ -60,9 +61,14 @@ class ImageWidget(QWidget):
         Register our module to the pico module.
         """
         self._picoProxy = ALProxy("PicoModule", IP, PORT)
-        self._picoProxy.call("addClassifier", "face", "/home/mirko/Devel/ADORE/PicoClass/pico/rnt/cascades/facefinder", -1, -1, -1 ,-1, -1)
-        self._picoProxy.call("setActiveCamera",0)
-        self._picoProxy.call("subscribe", "mirko")
+
+        # switch between binary and string call to addClassifier
+
+        #self._picoProxy.addClassifier("face", "/home/mirko/Devel/ADORE/PicoClass/pico/rnt/cascades/facefinder", -1, -1, -1 ,-1, -1)
+        self._picoProxy.addClassifier("casa", "/home/mirko/Devel/ADORE/PicoClass/pico/gen/casa", -1, -1, -1 ,-1, 0)
+        self._picoProxy.setActiveCamera(self._cameraID)
+        self._picoProxy.subscribe("mirko")
+        self._picoProxy.setFrameRate(30)
 
         """
         Register our module to the video device.
@@ -70,7 +76,7 @@ class ImageWidget(QWidget):
         self._videoProxy = ALProxy("ALVideoDevice", IP, PORT)
         resolution = vision_definitions.kQQVGA  # 160 * 120
         colorSpace = vision_definitions.kRGBColorSpace
-        self._imgClient = self._videoProxy.subscribe("_client", resolution, colorSpace, 5)
+        self._imgClient = self._videoProxy.subscribe("_client", resolution, colorSpace, 30)
 
         # Select camera.
         self._videoProxy.setParam(vision_definitions.kCameraSelectID, self._cameraID)
@@ -84,7 +90,7 @@ class ImageWidget(QWidget):
             self._videoProxy.unsubscribe(self._imgClient)
             
         self._picoProxy.unsubscribe("mirko")
-        self._picoProxy.call("removeClassifier", "face")
+        self._picoProxy.removeClassifier("face")
 
     def paintEvent(self, event):
         """
@@ -139,7 +145,7 @@ class ImageWidget(QWidget):
 
 
 if __name__ == '__main__':
-    IP = "169.254.28.144"  # Replace here with your NaoQi's IP address.
+    IP = "169.254.166.229"  # Replace here with your NaoQi's IP address.
     PORT = 9559
     CameraID = 0
 

@@ -39,10 +39,11 @@ public:
     virtual void stop();
     virtual void process(AL::ALImage*);
 
-    void addClassifier(std::string, AL::ALValue, float, float, float, int, int);
-    void removeClassifier(std::string);
+    bool addClassifier(std::string, AL::ALValue, float, float, float, int, int);
+    bool removeClassifier(std::string);
     AL::ALValue getClassifierList();
     AL::ALValue getClassifierParameters(std::string);
+    bool changeClassifierParameters(std::string, float, float, float, int, int);
     void detectOnImage(AL::ALImage);
 };
 

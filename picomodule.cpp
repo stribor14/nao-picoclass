@@ -29,7 +29,7 @@ bool PicoModule::nameExist(std::string name)
 }
 
 PicoModule::PicoModule(boost::shared_ptr<AL::ALBroker> broker, const std::string &name) :
-    AL::ALVisionExtractor(broker, name, AL::kVGA, AL::kYuvColorSpace, 5),
+    AL::ALVisionExtractor(broker, name, AL::k4VGA, AL::kYuvColorSpace, 5),
     m_memoryProxy(getParentBroker())
 {
     setModuleDescription("Image classification module based on Pico algorithm");
@@ -43,10 +43,12 @@ PicoModule::PicoModule(boost::shared_ptr<AL::ALBroker> broker, const std::string
     addParam("stridefactor", "Strade factor for window movement between neighboring detections [float = 0.1][\%]");
     addParam("minsize", "Minimum size for detected object [int = 128][pix]");
     addParam("treshold", "Detection certainty treshold [float = 5.0]");
+    setReturn("success", "If action succeded [bool]");
 
     functionName("removeClassifier", getName(), "Remove classifier by name");
     BIND_METHOD(PicoModule::removeClassifier);
     addParam("name", "Name of classifier [string]");
+    setReturn("success", "If action succeded [bool]");
 
     functionName("getClassifierList", getName(), "Get list of classifier names");
     BIND_METHOD(PicoModule::getClassifierList);
@@ -56,6 +58,16 @@ PicoModule::PicoModule(boost::shared_ptr<AL::ALBroker> broker, const std::string
     BIND_METHOD(PicoModule::getClassifierParameters);
     addParam("name", "Name of classifier [string]");
     setReturn("parameters", "Array of classifier parameters (FALSE if name doesn\'t exist) [ALValue]");
+
+    functionName("changeClassifierParameters", getName(), "Change classifier parameters (pass negative value to set default one)");
+    BIND_METHOD(PicoModule::changeClassifierParameters);
+    addParam("name", "Name of classifier [string]");
+    addParam("angle", "Cascade rotation [float = 0][rad]");
+    addParam("scalefactor", "Scale factor during multiscale detection [float = 1.1][\%]");
+    addParam("stridefactor", "Strade factor for window movement between neighboring detections [float = 0.1][\%]");
+    addParam("minsize", "Minimum size for detected object [int = 128][pix]");
+    addParam("treshold", "Detection certainty treshold [float = 5.0]");
+    setReturn("success", "If action succeded [bool]");
 
     functionName("detectOnImage", getName(), "Run detection on one image (pass negative value to set default one)");
     BIND_METHOD(PicoModule::detectOnImage);
@@ -128,10 +140,10 @@ void PicoModule::process(AL::ALImage *img)
     if(raise) m_memoryProxy.raiseEvent("picoDetections", out);
 }
 
-void PicoModule::addClassifier(std::string name, AL::ALValue cascade, float angle, float scalefactor, float stridefactor, int minsize, int treshold){
+bool PicoModule::addClassifier(std::string name, AL::ALValue cascade, float angle, float scalefactor, float stridefactor, int minsize, int treshold){
     if(nameExist(name)){
         qiLogError("PicoModule") << "Classifier with name \"" << name << "\" already exist." << std::endl;
-        return;
+        return false;
     }
     classifier temp;
     temp.name = name;
@@ -147,7 +159,7 @@ void PicoModule::addClassifier(std::string name, AL::ALValue cascade, float angl
         FILE* file = fopen(path.c_str(), "rb");
         if(!file){
             qiLogError("PicoModule") << "Cannot read cascade from: " << path << std::endl;
-            return;
+            return false;
         }
         fseek(file, 0L, SEEK_END);
         int size = ftell(file);
@@ -164,23 +176,22 @@ void PicoModule::addClassifier(std::string name, AL::ALValue cascade, float angl
         memcpy(temp.cascade, cascade.GetBinary(), size);
     } else {
         qiLogError("PicoModule") << "Cascade is nor data[Binary] nor path[String]" << std::endl;
+        return false;
     }
-
     qiLogInfo("PicoModule") << "Classifier \"" << name << "\" added";
+    return true;
 }
 
-void PicoModule::removeClassifier(std::string name){
-    if(!nameExist(name)){
-        qiLogWarning("PicoModule") << "Classifier with name \"" << name << "\" doesn\'t exist" << std::endl;
-        return;
-    }
+bool PicoModule::removeClassifier(std::string name){
     for(std::list<classifier>::iterator it = m_classifiers.begin(); it != m_classifiers.end(); ++it)
         if(!name.compare(it->name)){
             free(it->cascade);
             m_classifiers.erase(it);
-            return;
+            qiLogInfo("PicoModule") << "Classifier \"" << name << "\" removed" << std::endl;
+            return true;
         }
-    qiLogInfo("PicoModule") << "Classifier \"" << name << "\" removed" << std::endl;
+    qiLogWarning("PicoModule") << "Classifier with name \"" << name << "\" doesn\'t exist" << std::endl;
+    return false;
 }
 
 AL::ALValue PicoModule::getClassifierList()
@@ -193,10 +204,6 @@ AL::ALValue PicoModule::getClassifierList()
 
 AL::ALValue PicoModule::getClassifierParameters(std::string name)
 {
-    if(!nameExist(name)){
-        qiLogWarning("PicoModule") << "Classifier with name \"" << name << "\" doesn\'t exist" << std::endl;
-        return AL::ALValue(false);
-    }
     for(std::list<classifier>::iterator it = m_classifiers.begin(); it != m_classifiers.end(); ++it)
         if(!name.compare(it->name)){
             AL::ALValue tmp;
@@ -208,7 +215,22 @@ AL::ALValue PicoModule::getClassifierParameters(std::string name)
             tmp.arrayPush(it->treshold);
             return tmp;
         }
+    qiLogWarning("PicoModule") << "Classifier with name \"" << name << "\" doesn\'t exist" << std::endl;
     return AL::ALValue(false);
+}
+
+bool PicoModule::changeClassifierParameters(std::string name, float angle, float scalefactor, float stridefactor, int minsize, int treshold){
+    for(std::list<classifier>::iterator it = m_classifiers.begin(); it != m_classifiers.end(); ++it)
+        if(!name.compare(it->name)){
+            it->angle = angle < 0 ? def_angle : angle*2*3.1415926;
+            it->scalefactor = scalefactor < 0 ? def_scalefactor : scalefactor;
+            it->stridefactor = stridefactor < 0 ? def_stridefactor : stridefactor;
+            it->minsize = minsize < 0 ? def_minsize : minsize;
+            it->treshold = treshold < 0 ? def_treshold : treshold;
+            return true;
+    }
+    qiLogWarning("PicoModule") << "Classifier with name \"" << name << "\" doesn\'t exist" << std::endl;
+    return false;
 }
 
 void PicoModule::detectOnImage(AL::ALImage image){

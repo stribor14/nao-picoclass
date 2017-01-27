@@ -62,8 +62,8 @@ def export(im, r, c, s):
 	ncols = im.shape[1]
 
 	# crop
-	r0 = max(int(r - s), 0); r1 = min(r + s, nrows)
-	c0 = max(int(c - s), 0); c1 = min(c + s, ncols)
+	r0 = max(int(r - s*0.75), 0); r1 = min(int(r + s*0.75), nrows)
+	c0 = max(int(c - s*0.75), 0); c1 = min(int(c + s*0.75), ncols)
 
 	im = im[r0:r1, c0:c1]
 
