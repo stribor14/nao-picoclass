@@ -28,7 +28,6 @@ private:
     AL::ALMemoryProxy m_memoryProxy;
     std::list<classifier> m_classifiers;
 
-    bool nameExist(std::string);
 public:
     PicoModule(boost::shared_ptr<AL::ALBroker>, const std::string&);
 

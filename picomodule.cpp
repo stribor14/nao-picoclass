@@ -21,13 +21,6 @@ extern "C"{
 #define def_minsize 128
 #define def_treshold  5.0
 
-bool PicoModule::nameExist(std::string name)
-{
-    for(std::list<classifier>::iterator it = m_classifiers.begin(); it != m_classifiers.end(); ++it)
-        if(!name.compare(it->name)) return true;
-    return false;
-}
-
 PicoModule::PicoModule(boost::shared_ptr<AL::ALBroker> broker, const std::string &name) :
     AL::ALVisionExtractor(broker, name, AL::k4VGA, AL::kYuvColorSpace, 5),
     m_memoryProxy(getParentBroker())
@@ -142,10 +135,12 @@ void PicoModule::process(AL::ALImage *img)
 }
 
 bool PicoModule::addClassifier(std::string name, AL::ALValue cascade, float angle, float scalefactor, float stridefactor, int minsize, int treshold){
-    if(nameExist(name)){
-        qiLogError("PicoModule") << "Classifier with name \"" << name << "\" already exist." << std::endl;
-        return false;
-    }
+    for(std::list<classifier>::iterator it = m_classifiers.begin(); it != m_classifiers.end(); ++it)
+        if(!name.compare(it->name)){
+            qiLogError("PicoModule") << "Classifier with name \"" << name << "\" already exist." << std::endl;
+            return false;
+        }
+
     classifier temp;
     temp.name = name;
     temp.angle = angle < 0 ? def_angle : angle*2*3.1415926;
